@@ -9,20 +9,13 @@ var stringSimilarity = require('string-similarity');
 
 var textBuilder = "Sorry miaw don`t have any information about that :(\nMaybe you wrote it wrong, try again";
 
-var bannRoll = [];
-var bannLuck = [];
-
-var timestampFirst = null;
-var timestampFirst2 = null;
-
 var listhero = null;
 var listart = null;
 var listitem = null;
-var camps = [];
 
 const config = {
-  channelAccessToken: "PnYcVymrgGwrLsgSOvgDPKTfCfygBXKSqRIYr74lKPMEojlX02Ok4/iCc/mjlU27UHdc7isDx03k1XEcRWW3mcc0bVjLYUaw7E/cGOWSwtD/hn8CrMes9fdPl5+1kxQBMKpJ9tCUSSpGhpfKXjPhxwdB04t89/1O/w1cDnyilFU=",
-  channelSecret: "d3b5b1e37be4c41a7e40270abf6626f4",
+  channelAccessToken: "",
+  channelSecret: "",
 };
 
 // create LINE SDK client
@@ -62,10 +55,7 @@ function handleEvent(event) {
         textBuilder = textBuilder+"|-> info location [Catalyst Name] \n";
         textBuilder = textBuilder+"|-> info hero [Hero Name] \n";
         textBuilder = textBuilder+"|-> info artifact [Artifact Name] \n";
-        textBuilder = textBuilder+"|-> kitty luck \n";
-        textBuilder = textBuilder+"|-> kitty roll \n";
-        textBuilder = textBuilder+"|-> kitty news \n\n";        
-        // textBuilder = textBuilder+"To kick KittyUwU from group: kitty bye \n\n";
+        textBuilder = textBuilder+"|-> kitty news \n\n";
         textBuilder = textBuilder+"Meaw hope meaw can help u :3 \n";
         textBuilder = textBuilder+"|-> KittyUwU dev @Line: @irfananda00 \n";
         const echo = { type: 'text', text: textBuilder };
@@ -105,43 +95,6 @@ function handleEvent(event) {
         var kittyResponse = ["Salah sendiri percaya sama kitty :3", "Tertypu kamu bangshad :*", "Jiahahahaha", "Nyahahaha!", "Miaaww"];
         const echo = { type: 'text', text: kittyResponse[Math.floor(Math.random() * (+kittyResponse.length-1 - +0)) + +0] };
         return client.replyMessage(event.replyToken, echo);
-      }
-      else if(cmd.includes("kitty roll")){           
-        return roll(event)     
-      }
-      else if(cmd.includes("kitty luck")){           
-        return luck(event)     
-      }
-      else if(cmd == "admin00 reset bannroll"){
-        bannRoll = [];
-        bannLuck = [];
-        const echo = { type: 'text', text: "bannroll and bannluck reset done" };
-        return client.replyMessage(event.replyToken, echo);
-      }
-      else if(cmd == "admin00 reload dataset"){
-        getListItem();
-        getListHero();
-        getListArtifact();
-        const echo = { type: 'text', text: "dataset reloaded" };
-        return client.replyMessage(event.replyToken, echo);
-      }
-      else if(cmd == "admin00 reload moraleset"){
-        reloadMoraleDataset();
-        const echo = { type: 'text', text: "moraleset reloaded" };
-        return client.replyMessage(event.replyToken, echo);
-      }
-      // else if(cmd == "admin00 tes kick"){
-      //   if(event.source.type == 'group'){
-      //     client.leaveGroup(event.source.groupId);
-      //   }else if(event.source.type == 'room'){          
-      //     client.leaveRoom(event.source.roomId);
-      //   }
-      // }
-      else if(cmd.includes("admin00 info camp ")){        
-        var cmd = cmd.toLowerCase().replace("admin00 info camp ","").replace(/\s+/g, '-');
-        var heroes = cmd.split(',');
-        console.log(heroes);
-        return getBestMorale(event, heroes);
       }
       else if(cmd == "kitty news"){
         //show list command      
@@ -185,6 +138,23 @@ function handleEvent(event) {
         // detail info about hero
         return detailArtifact(event, cmd)
       }
+      else if(cmd == "admin00 reload dataset"){
+        getListItem();
+        getListHero();
+        getListArtifact();
+        const echo = { type: 'text', text: "dataset reloaded" };
+        return client.replyMessage(event.replyToken, echo);
+      }
+      else if(cmd.includes("admin00 info morale ")){        
+        var cmd = cmd.toLowerCase().replace("admin00 info morale ","").replace(/\s+/g, '-');
+        var heroes = cmd.split(',');
+        console.log(heroes);
+        return getBestMorale(event, heroes);
+      }
+      else if(cmd.includes("admin00 test ")){        
+        var cmd = cmd.toLowerCase().replace("admin00 test ","").replace(/\& /g, '');
+        console.log(cmd);
+      }
     }catch(err){    
       console.log("error ",err);
       const echo = { type: 'text', text: "Meaw don`t feel so good :'(" };
@@ -192,51 +162,77 @@ function handleEvent(event) {
     }
   }
 }
+
 //TODO: calculate morale of 4 heroes in labirin
 function getBestMorale(event, heroes){
   var moralePoints = new Map();
   if(heroes.length == 4){
-    for (let i = 0; i < heroes.length; i++) { 
-      console.log('id: ', heroes[i]);    
-      for (let j = 0; j < camps.length; j++) { 
-        if(camps[j]._id == heroes[i]){
-          console.log(camps[j]);
-          // console.log('value1: ',camp.reactions[camp.options[0]]);
-          // console.log('value2: ',camp.reactions[camp.options[1]]);
-          // res.moralePoints( i+"_"+heroes[i], camp.reactions[camp.options[0]] );
-          // res.moralePoints( i+"_"+heroes[i], camp.reactions[camp.options[1]] );      
-          break;
-        }
+      var request = require('request');  
+      console.log('id: ', heroes[0]);    
+      request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+heroes[0], function (error, response, body) {        
+        var res1 = JSON.parse(body);          
+        console.log(res1.results[0].camping);
+        
+      console.log('id: ', heroes[1]);    
+      request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+heroes[1], function (error, response, body) {        
+        var res2 = JSON.parse(body);          
+        console.log(res2.results[0].camping);
+          
+      console.log('id: ', heroes[2]);              
+      request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+heroes[2], function (error, response, body) {        
+        var res3 = JSON.parse(body);          
+        console.log(res3.results[0].camping);    
+      
+      console.log('id: ', heroes[3]);              
+      request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+heroes[3], function (error, response, body) {        
+        var res4 = JSON.parse(body);          
+        console.log(res4.results[0].camping);
+      
+      var res = [res1,res2,res3,res4];
+      for (let i = 0; i < 4; i++) {
+        for (let opt = 0; opt < 2; opt++) {
+          var option = res[i].results[0].camping.options[opt]; 
+          var key = heroes[i]+" "+option;
+          var count = 0;
+          for (let j = 0; j < 4; j++) {
+            if(res[j].results[0]._id != heroes[i]){
+              var value = res[j].results[0].camping.reactions[option];
+              count = count + value;
+            }
+          }
+          moralePoints.set(key,count);
+        }        
       }
-    }
-    const echo = { type: 'text', text: 'success' };
-    return client.replyMessage(event.replyToken, echo);
+      // console.log('original moralePoints: ', moralePoints);   
+      moralePoints[Symbol.iterator] = function* () {
+        yield* [...this.entries()].sort((a, b) => b[1] - a[1]);
+      }
+      // console.log('sorted moralePoints: ', moralePoints);  
+      textBuilder = "";      
+      var c = 0;
+      var totVal = 0;
+      for (const [k, v] of moralePoints) {
+        textBuilder = textBuilder+k+" ("+v+")";
+        totVal = totVal + v;
+        c++;
+        if(c == 2){
+          break;
+        }else{
+          textBuilder = textBuilder+"\n";
+        }
+      }    
+      textBuilder = "Best morale: "+totVal+"\n"+textBuilder;
+      const echo = { type: 'text', text: textBuilder };
+      return client.replyMessage(event.replyToken, echo); 
+        
+      });
+      });
+      });
+      });
   }else{
-    const echo = { type: 'text', text: 'The number of heroes must be 4 and must be written correctly\nEx: info camp sez,vildred,fallen cecilia,angelica' };
+    const echo = { type: 'text', text: 'The number of heroes must be 4\nEx: info morale sez,vildred,fallen cecilia,angelica' };
     return client.replyMessage(event.replyToken, echo);
   }
-}
-
-function reloadMoraleDataset(){
-  getListHero();  
-  // if(listhero!=null){
-  //   for (let i = 0; i < listhero.results.length; i++) { 
-  //     var request = require('request');
-  //     var _id = listhero.results[i]._id;                  
-  //     request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+_id, function (error, response, body) {        
-  //       var res = JSON.parse(body);             
-  //       if(res.results != null && res.results.length>0){
-  //         camps.push({ 
-  //           id: res.results[0]._id, 
-  //           hero: res.results[0].name, 
-  //           camping_options: res.results[0].camping.options, 
-  //           camping_reactions: res.results[0].camping.reactions 
-  //         });
-  //         console.log(camps);
-  //       }
-  //     });
-  //   }
-  // }
 }
 
 function getListHero(){
@@ -493,76 +489,6 @@ function showLocationItem(event, cmd){
     const echo = { type: 'text', text: textBuilder };
     return client.replyMessage(event.replyToken, echo);                        
     });
-}
-
-function roll(event){
-  if(timestampFirst==null){
-    timestampFirst = event.timestamp;
-  }else if(new Date(event.timestamp-timestampFirst).getHours()>=12){
-    bannRoll = [];
-    timestampFirst = event.timestamp;
-  }     
-  console.log('Roll length: ',new Date(event.timestamp-timestampFirst).getHours())
-  var allowRoll = true;       
-  if(bannRoll.length == 0){
-    bannRoll.push(event.source.userId);
-    allowRoll = true;
-    console.log('bannroll empty');
-  }else if(bannRoll.indexOf(event.source.userId) == -1){
-    bannRoll.push(event.source.userId)          
-    allowRoll = true;
-    console.log('userid not found');
-  }else{
-    allowRoll = false;
-    console.log('userid found');
-  }        
-  if (allowRoll){
-    if(listhero==null){
-      getListHero();
-    }
-    if(listhero != null && listhero.results.length>0){
-      var kittyResponse = ["Umm,", "I hope u will get", "Congrats u got", "UwU"];
-      var kittyResponse2 = ["?", ":3", "!", "UwU"];
-      var rand = (Math.floor(Math.random() * (+listhero.results.length-1 - +0)) + +0);        
-      var resp = (Math.floor(Math.random() * (+kittyResponse.length-1 - +0)) + +0);
-      textBuilder = kittyResponse[resp]+" "+listhero.results[rand].name+kittyResponse2[resp];
-      const echo = { type: 'text', text: textBuilder };
-      return client.replyMessage(event.replyToken, echo);
-    }
-  }
-}
-
-function luck(event){
-  if(timestampFirst2==null){
-    timestampFirst2 = event.timestamp;
-  }else if(new Date(event.timestamp-timestampFirst2).getHours()>=12){
-    bannLuck = [];
-    timestampFirst2 = event.timestamp;
-  }     
-  console.log('Luck length: ',new Date(event.timestamp-timestampFirst2).getHours())
-  var allowRoll = true;       
-  if(bannLuck.length == 0){
-    bannLuck.push(event.source.userId);
-    allowRoll = true;
-    console.log('bannLuck empty');
-  }else if(bannLuck.indexOf(event.source.userId) == -1){
-    bannLuck.push(event.source.userId)          
-    allowRoll = true;
-    console.log('userid not found');
-  }else{
-    allowRoll = false;
-    console.log('userid found');
-  }        
-  if (allowRoll){
-    var maxRate = 99;
-    var rand = (Math.floor(Math.random() * (+maxRate - +0)) + +0);
-    var textBuilder = "Your LUCK: "+rand + "%\n";
-    if(rand<20){
-      textBuilder = textBuilder+"AMPAS! Nyahahaha XD"          
-    }
-    const echo = { type: 'text', text: textBuilder };
-    return client.replyMessage(event.replyToken, echo);
-  }
 }
 
 // listen on port

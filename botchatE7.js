@@ -59,13 +59,13 @@ function handleEvent(event) {
       else if(cmd == "kitty help"){
         //show list command
         var textBuilder = "Miaw miaaw u can ask meaw about: \n";
+        textBuilder = textBuilder+"|-> kitty news \n";  
+        textBuilder = textBuilder+"|-> kitty luck \n";
+        textBuilder = textBuilder+"|-> kitty roll \n";   
         textBuilder = textBuilder+"|-> info location [Catalyst Name] \n";
         textBuilder = textBuilder+"|-> info hero [Hero Name] \n";
         textBuilder = textBuilder+"|-> info artifact [Artifact Name] \n";
-        textBuilder = textBuilder+"|-> kitty luck \n";
-        textBuilder = textBuilder+"|-> kitty roll \n";
-        textBuilder = textBuilder+"|-> kitty news \n\n";        
-        // textBuilder = textBuilder+"To kick KittyUwU from group: kitty bye \n\n";
+        textBuilder = textBuilder+"|-> info morale [Heroes Name1],[Heroes Name2],[Heroes Name3],[Heroes Name4] \n\n";
         textBuilder = textBuilder+"Meaw hope meaw can help u :3 \n";
         textBuilder = textBuilder+"|-> KittyUwU dev @Line: @irfananda00 \n";
         const echo = { type: 'text', text: textBuilder };
@@ -137,8 +137,8 @@ function handleEvent(event) {
       //     client.leaveRoom(event.source.roomId);
       //   }
       // }
-      else if(cmd.includes("admin00 info camp ")){        
-        var cmd = cmd.toLowerCase().replace("admin00 info camp ","").replace(/\s+/g, '-');
+      else if(cmd.includes("info morale ")){        
+        var cmd = cmd.toLowerCase().replace("info morale ","").replace(/\& /g, '').replace(/\s+/g, '-');
         var heroes = cmd.split(',');
         console.log(heroes);
         return getBestMorale(event, heroes);
@@ -192,51 +192,76 @@ function handleEvent(event) {
     }
   }
 }
-//TODO: calculate morale of 4 heroes in labirin
+
 function getBestMorale(event, heroes){
   var moralePoints = new Map();
   if(heroes.length == 4){
-    for (let i = 0; i < heroes.length; i++) { 
-      console.log('id: ', heroes[i]);    
-      for (let j = 0; j < camps.length; j++) { 
-        if(camps[j]._id == heroes[i]){
-          console.log(camps[j]);
-          // console.log('value1: ',camp.reactions[camp.options[0]]);
-          // console.log('value2: ',camp.reactions[camp.options[1]]);
-          // res.moralePoints( i+"_"+heroes[i], camp.reactions[camp.options[0]] );
-          // res.moralePoints( i+"_"+heroes[i], camp.reactions[camp.options[1]] );      
-          break;
-        }
+      var request = require('request');  
+      // console.log('id: ', heroes[0]);    
+      request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+heroes[0], function (error, response, body) {        
+        var res1 = JSON.parse(body);          
+        // console.log(res1.results[0].camping);
+        
+      console.log('id: ', heroes[1]);    
+      request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+heroes[1], function (error, response, body) {        
+        var res2 = JSON.parse(body);          
+        // console.log(res2.results[0].camping);
+          
+      console.log('id: ', heroes[2]);              
+      request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+heroes[2], function (error, response, body) {        
+        var res3 = JSON.parse(body);          
+        // console.log(res3.results[0].camping);    
+      
+      console.log('id: ', heroes[3]);              
+      request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+heroes[3], function (error, response, body) {        
+        var res4 = JSON.parse(body);          
+        // console.log(res4.results[0].camping);
+      
+      var res = [res1,res2,res3,res4];
+      for (let i = 0; i < 4; i++) {
+        for (let opt = 0; opt < 2; opt++) {
+          var option = res[i].results[0].camping.options[opt]; 
+          var key = heroes[i]+" "+option;
+          var count = 0;
+          for (let j = 0; j < 4; j++) {
+            if(res[j].results[0]._id != heroes[i]){
+              var value = res[j].results[0].camping.reactions[option];
+              count = count + value;
+            }
+          }
+          moralePoints.set(key,count);
+        }        
       }
-    }
-    const echo = { type: 'text', text: 'success' };
-    return client.replyMessage(event.replyToken, echo);
+      // console.log('original moralePoints: ', moralePoints);   
+      moralePoints[Symbol.iterator] = function* () {
+        yield* [...this.entries()].sort((a, b) => b[1] - a[1]);
+      }
+      // console.log('sorted moralePoints: ', moralePoints);  
+      textBuilder = "";      
+      var c = 0;
+      var totVal = 0;
+      for (const [k, v] of moralePoints) {
+        textBuilder = textBuilder+k+" ("+v+")";
+        totVal = totVal + v;
+        c++;
+        if(c == 2){
+          break;
+        }else{
+          textBuilder = textBuilder+"\n";
+        }
+      }    
+      textBuilder = "Best morale: "+totVal+"\n"+textBuilder;
+      const echo = { type: 'text', text: textBuilder };
+      return client.replyMessage(event.replyToken, echo); 
+        
+      });
+      });
+      });
+      });
   }else{
-    const echo = { type: 'text', text: 'The number of heroes must be 4 and must be written correctly\nEx: info camp sez,vildred,fallen cecilia,angelica' };
+    const echo = { type: 'text', text: 'The number of heroes must be 4\nEx: info morale sez,vildred,fallen cecilia,angelica' };
     return client.replyMessage(event.replyToken, echo);
   }
-}
-
-function reloadMoraleDataset(){
-  getListHero();  
-  // if(listhero!=null){
-  //   for (let i = 0; i < listhero.results.length; i++) { 
-  //     var request = require('request');
-  //     var _id = listhero.results[i]._id;                  
-  //     request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+_id, function (error, response, body) {        
-  //       var res = JSON.parse(body);             
-  //       if(res.results != null && res.results.length>0){
-  //         camps.push({ 
-  //           id: res.results[0]._id, 
-  //           hero: res.results[0].name, 
-  //           camping_options: res.results[0].camping.options, 
-  //           camping_reactions: res.results[0].camping.reactions 
-  //         });
-  //         console.log(camps);
-  //       }
-  //     });
-  //   }
-  // }
 }
 
 function getListHero(){
