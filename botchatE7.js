@@ -125,11 +125,6 @@ function handleEvent(event) {
         const echo = { type: 'text', text: "dataset reloaded" };
         return client.replyMessage(event.replyToken, echo);
       }
-      else if(cmd == "admin00 reload moraleset"){
-        reloadMoraleDataset();
-        const echo = { type: 'text', text: "moraleset reloaded" };
-        return client.replyMessage(event.replyToken, echo);
-      }
       // else if(cmd == "admin00 tes kick"){
       //   if(event.source.type == 'group'){
       //     client.leaveGroup(event.source.groupId);
@@ -194,28 +189,69 @@ function handleEvent(event) {
 }
 
 function getBestMorale(event, heroes){
+  textBuilder = '1. The number of heroes must be 4\n2. Hero name must be written correctly\n3. Separate each heroes with comma (ex: A,B) NOT comma and space (ex: A, B)\nEx: info morale sez,vildred,fallen cecilia,angelica';
   var moralePoints = new Map();
   if(heroes.length == 4){
       var request = require('request');  
-      // console.log('id: ', heroes[0]);    
+      console.log('id: ', heroes[0]);    
       request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+heroes[0], function (error, response, body) {        
-        var res1 = JSON.parse(body);          
-        // console.log(res1.results[0].camping);
+        var res1 = JSON.parse(body);         
+        if(res1.results == null || res1.results.length == 0){          
+          var searchRes = searchHero(heroes[0].replace('-', ' '));                
+          if(searchRes.length != 0){
+            textBuilder = "Maybe you mean one of these?\n";       
+            for (let i = 0; i < searchRes.length; i++) {        
+              textBuilder = textBuilder+searchRes[i]+"\n";
+            }
+          } 
+          const echo = { type: 'text', text: textBuilder };
+          return client.replyMessage(event.replyToken, echo); 
+        }
         
       console.log('id: ', heroes[1]);    
       request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+heroes[1], function (error, response, body) {        
-        var res2 = JSON.parse(body);          
-        // console.log(res2.results[0].camping);
+        var res2 = JSON.parse(body);         
+        if(res2.results == null || res2.results.length == 0){
+          var searchRes = searchHero(heroes[1].replace('-', ' '));                
+          if(searchRes.length != 0){
+            textBuilder = "Maybe you mean one of these?\n";       
+            for (let i = 0; i < searchRes.length; i++) {        
+              textBuilder = textBuilder+searchRes[i]+"\n";
+            }
+          } 
+          const echo = { type: 'text', text: textBuilder };
+          return client.replyMessage(event.replyToken, echo); 
+        }
           
       console.log('id: ', heroes[2]);              
       request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+heroes[2], function (error, response, body) {        
         var res3 = JSON.parse(body);          
-        // console.log(res3.results[0].camping);    
+        if(res3.results == null || res3.results.length == 0){
+          var searchRes = searchHero(heroes[2].replace('-', ' '));                
+          if(searchRes.length != 0){
+            textBuilder = "Maybe you mean one of these?\n";       
+            for (let i = 0; i < searchRes.length; i++) {        
+              textBuilder = textBuilder+searchRes[i]+"\n";
+            }
+          } 
+          const echo = { type: 'text', text: textBuilder };
+          return client.replyMessage(event.replyToken, echo); 
+        }
       
       console.log('id: ', heroes[3]);              
       request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+heroes[3], function (error, response, body) {        
-        var res4 = JSON.parse(body);          
-        // console.log(res4.results[0].camping);
+        var res4 = JSON.parse(body);              
+        if(res4.results == null || res4.results.length == 0){
+          var searchRes = searchHero(heroes[3].replace('-', ' '));                
+          if(searchRes.length != 0){
+            textBuilder = "Maybe you mean one of these?\n";       
+            for (let i = 0; i < searchRes.length; i++) {        
+              textBuilder = textBuilder+searchRes[i]+"\n";
+            }
+          } 
+          const echo = { type: 'text', text: textBuilder };
+          return client.replyMessage(event.replyToken, echo);  
+        }
       
       var res = [res1,res2,res3,res4];
       for (let i = 0; i < 4; i++) {
@@ -232,11 +268,9 @@ function getBestMorale(event, heroes){
           moralePoints.set(key,count);
         }        
       }
-      // console.log('original moralePoints: ', moralePoints);   
       moralePoints[Symbol.iterator] = function* () {
         yield* [...this.entries()].sort((a, b) => b[1] - a[1]);
-      }
-      // console.log('sorted moralePoints: ', moralePoints);  
+      }      
       textBuilder = "";      
       var c = 0;
       var totVal = 0;
@@ -258,9 +292,6 @@ function getBestMorale(event, heroes){
       });
       });
       });
-  }else{
-    const echo = { type: 'text', text: 'The number of heroes must be 4\nEx: info morale sez,vildred,fallen cecilia,angelica' };
-    return client.replyMessage(event.replyToken, echo);
   }
 }
 
