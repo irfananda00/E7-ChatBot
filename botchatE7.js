@@ -21,8 +21,8 @@ var listitem = null;
 var camps = [];
 
 const config = {
-  channelAccessToken: "Rktp69SHlWZEqZb9BtxIDkEaRJVI6GEYvGkHvTyBBhuAaX/1KgslTPA2l/Z5VVou7cPJQjxSOrjpibR9FWhUtu/+Fa8S9bN37M6Fe1oZoIDPD3N95Li12DuOdpMz8l5MtKUIXCsf8v4nSpwL6msNYAdB04t89/1O/w1cDnyilFU=",
-  channelSecret: "a1c0124fb0995b0e89a2dbc289e1ced9",
+  channelAccessToken: "",
+  channelSecret: "",
 };
 
 // create LINE SDK client
@@ -348,7 +348,7 @@ function detailArtifact(event, cmd){
 function detailHero(detType, event, cmd){
   if(detType == "info"){
     var request = require('request');
-    var id = cmd.toLowerCase().replace("info hero ","").replace(/\s+/g, '-');                  
+    var id = cmd.toLowerCase().replace("info hero ","").replace(/\& /g, '').replace(/\s+/g, '-');                  
     request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+id, function (error, response, body) {        
       var res = JSON.parse(body);             
       if(res.results != null && res.results.length>0){
