@@ -1,17 +1,25 @@
-// server.js
-// where your node app starts
+//TODO: glitc NEED NEW SERVER
+//Basic ID 
 
 // init project
 const line = require('@line/bot-sdk');
 const express = require('express');
 const axios = require('axios');
 var stringSimilarity = require('string-similarity');
+var Parser = require('expr-eval').Parser;
 
 var textBuilder = "Sorry miaw don`t have any information about that :(\nMaybe you wrote it wrong, try again";
+
+var bannRoll = [];
+var bannLuck = [];
+
+var timestampFirst = null;
+var timestampFirst2 = null;
 
 var listhero = null;
 var listart = null;
 var listitem = null;
+var camps = [];
 
 const config = {
   channelAccessToken: "",
@@ -52,10 +60,15 @@ function handleEvent(event) {
       else if(cmd == "kitty help"){
         //show list command
         var textBuilder = "Miaw miaaw u can ask meaw about: \n";
+        textBuilder = textBuilder+"|-> kitty news \n";  
+        textBuilder = textBuilder+"|-> kitty luck \n";
+        textBuilder = textBuilder+"|-> kitty roll \n";   
         textBuilder = textBuilder+"|-> info location [Catalyst Name] \n";
         textBuilder = textBuilder+"|-> info hero [Hero Name] \n";
+        textBuilder = textBuilder+"|-> skill hero [Hero Name] \n";
+        textBuilder = textBuilder+"|-> stat hero [Hero Name] \n";
         textBuilder = textBuilder+"|-> info artifact [Artifact Name] \n";
-        textBuilder = textBuilder+"|-> kitty news \n\n";
+        textBuilder = textBuilder+"|-> info morale [Heroes Name1],[Heroes Name2],[Heroes Name3],[Heroes Name4] \n\n";
         textBuilder = textBuilder+"Meaw hope meaw can help u :3 \n";
         textBuilder = textBuilder+"|-> KittyUwU dev @Line: @irfananda00 \n";
         const echo = { type: 'text', text: textBuilder };
@@ -96,6 +109,38 @@ function handleEvent(event) {
         const echo = { type: 'text', text: kittyResponse[Math.floor(Math.random() * (+kittyResponse.length-1 - +0)) + +0] };
         return client.replyMessage(event.replyToken, echo);
       }
+      else if(cmd.includes("kitty roll")){           
+        return roll(event)     
+      }
+      else if(cmd.includes("kitty luck")){           
+        return luck(event)     
+      }
+      else if(cmd == "admin00 reset bannroll"){
+        bannRoll = [];
+        bannLuck = [];
+        const echo = { type: 'text', text: "bannroll and bannluck reset done" };
+        return client.replyMessage(event.replyToken, echo);
+      }
+      else if(cmd == "admin00 reload dataset"){
+        getListItem();
+        getListHero();
+        getListArtifact();
+        const echo = { type: 'text', text: "dataset reloaded" };
+        return client.replyMessage(event.replyToken, echo);
+      }
+      // else if(cmd == "admin00 tes kick"){
+      //   if(event.source.type == 'group'){
+      //     client.leaveGroup(event.source.groupId);
+      //   }else if(event.source.type == 'room'){          
+      //     client.leaveRoom(event.source.roomId);
+      //   }
+      // }
+      else if(cmd.includes("info morale ")){        
+        var cmd = cmd.toLowerCase().replace("info morale ","").replace(/\& /g, '').replace(/\s+/g, '-');
+        var heroes = cmd.split(',');
+        console.log(heroes);
+        return getBestMorale(event, heroes);
+      }
       else if(cmd == "kitty news"){
         //show list command      
         var request = require('request');
@@ -134,26 +179,17 @@ function handleEvent(event) {
         // detail skill about hero
         return detailHero("skill",event, cmd)
       }
+      else if(cmd.includes("damage hero ") && cmd.length>12){       
+        // detail damage output from hero
+        return detailHero("damage",event, cmd)
+      }
+      else if(cmd.includes("#dmg_multiplier-")){       
+        // calculate damage output from hero
+        return dmgHero(event, cmd)
+      }
       else if(cmd.includes("info artifact ") && cmd.length>14){       
         // detail info about hero
         return detailArtifact(event, cmd)
-      }
-      else if(cmd == "admin00 reload dataset"){
-        getListItem();
-        getListHero();
-        getListArtifact();
-        const echo = { type: 'text', text: "dataset reloaded" };
-        return client.replyMessage(event.replyToken, echo);
-      }
-      else if(cmd.includes("admin00 info morale ")){        
-        var cmd = cmd.toLowerCase().replace("admin00 info morale ","").replace(/\s+/g, '-');
-        var heroes = cmd.split(',');
-        console.log(heroes);
-        return getBestMorale(event, heroes);
-      }
-      else if(cmd.includes("admin00 test ")){        
-        var cmd = cmd.toLowerCase().replace("admin00 test ","").replace(/\& /g, '');
-        console.log(cmd);
       }
     }catch(err){    
       console.log("error ",err);
@@ -347,7 +383,7 @@ function searchItem(name){
 
 function detailArtifact(event, cmd){
   var request = require('request');
-    var id = cmd.toLowerCase().replace("info artifact ","").replace(/\s+/g, '-');                  
+    var id = cmd.toLowerCase().replace("info artifact ","").replace(/\& /g, '').replace(/\s+/g, '-');                  
     request('https://epicsevendb-apiserver.herokuapp.com/api/artifact/'+id, function (error, response, body) {        
       var res = JSON.parse(body);             
       if(res.results != null && res.results.length>0){
@@ -376,10 +412,34 @@ function detailArtifact(event, cmd){
     });
 }
 
+function dmgHero(event, cmd){
+  var formulas = cmd.split('\n');
+  console.log(formulas);
+  textBuilder = formulas[0];
+  for (let i = 2; i < formulas.length; i++) {        
+    if(formulas[i].includes("s1: ")){
+      var formula = formulas[i].replace("s1: ","");    
+      console.log('s1: ',Parser.evaluate(formula).toFixed(2));
+      textBuilder = textBuilder+'\n'+'s1: '+Parser.evaluate(formula).toFixed(2);
+    }else if(formulas[i].includes("s2: ")){
+      var formula = formulas[i].replace("s2: ","");    
+      console.log('s2: ',Parser.evaluate(formula).toFixed(2));
+      textBuilder = textBuilder+'\n'+'s2: '+Parser.evaluate(formula).toFixed(2);
+    }else if(formulas[i].includes("s3: ")){
+      var formula = formulas[i].replace("s3: ","");    
+      console.log('s3: ',Parser.evaluate(formula).toFixed(2));
+      textBuilder = textBuilder+'\n'+'s3: '+Parser.evaluate(formula).toFixed(2);
+    }
+  }
+  textBuilder = textBuilder+'\n'+'*The results may be different in game, because of damage reduction such as enemies defense stat, skill effects, etc';
+  const echo = { type: 'text', text: textBuilder };
+  return client.replyMessage(event.replyToken, echo);
+}
+
 function detailHero(detType, event, cmd){
   if(detType == "info"){
     var request = require('request');
-    var id = cmd.toLowerCase().replace("info hero ","").replace(/\s+/g, '-');                  
+    var id = cmd.toLowerCase().replace("info hero ","").replace(/\& /g, '').replace(/\s+/g, '-');                  
     request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+id, function (error, response, body) {        
       var res = JSON.parse(body);             
       if(res.results != null && res.results.length>0){
@@ -414,7 +474,7 @@ function detailHero(detType, event, cmd){
   }
   else if(detType == "stat"){
     var request = require('request');
-    var id = cmd.toLowerCase().replace("stat hero ","").replace(/\s+/g, '-');                  
+    var id = cmd.toLowerCase().replace("stat hero ","").replace(/\& /g, '').replace(/\s+/g, '-');                  
     request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+id, function (error, response, body) {        
       var res = JSON.parse(body);              
       if(res.results != null && res.results.length>0){        
@@ -450,7 +510,7 @@ function detailHero(detType, event, cmd){
   }
   else if(detType == "skill"){
     var request = require('request');
-    var id = cmd.toLowerCase().replace("skill hero ","").replace(/\s+/g, '-');                  
+    var id = cmd.toLowerCase().replace("skill hero ","").replace(/\& /g, '').replace(/\s+/g, '-');                  
     request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+id, function (error, response, body) {        
       var res = JSON.parse(body);              
       if(res.results != null && res.results.length>0){        
@@ -480,12 +540,47 @@ function detailHero(detType, event, cmd){
       return client.replyMessage(event.replyToken, echo);                        
     });
   }
-  
+  else if(detType == "damage"){
+    var request = require('request');
+    var id = cmd.toLowerCase().replace("damage hero ","").replace(/\& /g, '').replace(/\s+/g, '-');                  
+    request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+id, function (error, response, body) {        
+      var res = JSON.parse(body);              
+      if(res.results != null && res.results.length>0){ 
+        textBuilder = '#DMG_Multiplier-'+id+"\n";
+        textBuilder = textBuilder+"Copy this message and change the variable below based on your hero stat";
+        if(res.results[0].skills[0].simpleDmgMod.simplified !== ""){
+          textBuilder = textBuilder+"\nS1: "+res.results[0].skills[0].simpleDmgMod.simplified;   
+        }
+        if(res.results[0].skills[1].simpleDmgMod.simplified !== ""){
+          textBuilder = textBuilder+"\nS2: "+res.results[0].skills[1].simpleDmgMod.simplified;   
+        }
+        if(res.results[0].skills[2].simpleDmgMod.simplified !== ""){
+          textBuilder = textBuilder+"\nS3: "+res.results[0].skills[2].simpleDmgMod.simplified;   
+        }
+      }else{
+        var searchRes = searchHero(id.replace('-', ' '));      
+        if(listhero==null){      
+          textBuilder = "You wrote it wrong, try again\n";
+        }else{
+          if(searchRes.length == 0){
+            textBuilder = "Sorry meaw don`t have any information about that :(\nMaybe you wrote it wrong, try again";  
+          }else{
+            textBuilder = "Maybe you mean one of these?\n";
+          }
+        }
+        for (let i = 0; i < searchRes.length; i++) {        
+          textBuilder = textBuilder+searchRes[i]+"\n";
+        }
+      }
+      const echo = { type: 'text', text: textBuilder };
+      return client.replyMessage(event.replyToken, echo);
+    });
+  }
 }
 
 function showLocationItem(event, cmd){
     var request = require('request');
-    var id = cmd.toLowerCase().replace("info location ","").replace(/\s+/g, '-');                      
+    var id = cmd.toLowerCase().replace("info location ","").replace(/\& /g, '').replace(/\s+/g, '-');                      
     request('https://epicsevendb-apiserver.herokuapp.com/api/item/'+id, function (error, response, body) {        
     var res = JSON.parse(body);     
     if(res.results != null && res.results.length>0){
@@ -524,6 +619,76 @@ function showLocationItem(event, cmd){
     const echo = { type: 'text', text: textBuilder };
     return client.replyMessage(event.replyToken, echo);                        
     });
+}
+
+function roll(event){
+  if(timestampFirst==null){
+    timestampFirst = event.timestamp;
+  }else if(new Date(event.timestamp-timestampFirst).getHours()>=12){
+    bannRoll = [];
+    timestampFirst = event.timestamp;
+  }     
+  console.log('Roll length: ',new Date(event.timestamp-timestampFirst).getHours())
+  var allowRoll = true;       
+  if(bannRoll.length == 0){
+    bannRoll.push(event.source.userId);
+    allowRoll = true;
+    console.log('bannroll empty');
+  }else if(bannRoll.indexOf(event.source.userId) == -1){
+    bannRoll.push(event.source.userId)          
+    allowRoll = true;
+    console.log('userid not found');
+  }else{
+    allowRoll = false;
+    console.log('userid found');
+  }        
+  if (allowRoll){
+    if(listhero==null){
+      getListHero();
+    }
+    if(listhero != null && listhero.results.length>0){
+      var kittyResponse = ["Umm,", "I hope u will get", "Congrats u got", "UwU"];
+      var kittyResponse2 = ["?", ":3", "!", "UwU"];
+      var rand = (Math.floor(Math.random() * (+listhero.results.length-1 - +0)) + +0);        
+      var resp = (Math.floor(Math.random() * (+kittyResponse.length-1 - +0)) + +0);
+      textBuilder = kittyResponse[resp]+" "+listhero.results[rand].name+kittyResponse2[resp];
+      const echo = { type: 'text', text: textBuilder };
+      return client.replyMessage(event.replyToken, echo);
+    }
+  }
+}
+
+function luck(event){
+  if(timestampFirst2==null){
+    timestampFirst2 = event.timestamp;
+  }else if(new Date(event.timestamp-timestampFirst2).getHours()>=12){
+    bannLuck = [];
+    timestampFirst2 = event.timestamp;
+  }     
+  console.log('Luck length: ',new Date(event.timestamp-timestampFirst2).getHours())
+  var allowRoll = true;       
+  if(bannLuck.length == 0){
+    bannLuck.push(event.source.userId);
+    allowRoll = true;
+    console.log('bannLuck empty');
+  }else if(bannLuck.indexOf(event.source.userId) == -1){
+    bannLuck.push(event.source.userId)          
+    allowRoll = true;
+    console.log('userid not found');
+  }else{
+    allowRoll = false;
+    console.log('userid found');
+  }        
+  if (allowRoll){
+    var maxRate = 99;
+    var rand = (Math.floor(Math.random() * (+maxRate - +0)) + +0);
+    var textBuilder = "Your LUCK: "+rand + "%\n";
+    if(rand<20){
+      textBuilder = textBuilder+"AMPAS! Nyahahaha XD"          
+    }
+    const echo = { type: 'text', text: textBuilder };
+    return client.replyMessage(event.replyToken, echo);
+  }
 }
 
 // listen on port

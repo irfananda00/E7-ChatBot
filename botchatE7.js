@@ -1,11 +1,12 @@
-// server.js
-// where your node app starts
-//glitc cookie-wrinkle
+//glitc quixotic-beauty
+//Basic ID @131bmbdb
+
 // init project
 const line = require('@line/bot-sdk');
 const express = require('express');
 const axios = require('axios');
 var stringSimilarity = require('string-similarity');
+var Parser = require('expr-eval').Parser;
 
 var textBuilder = "Sorry miaw don`t have any information about that :(\nMaybe you wrote it wrong, try again";
 
@@ -64,6 +65,8 @@ function handleEvent(event) {
         textBuilder = textBuilder+"|-> kitty roll \n";   
         textBuilder = textBuilder+"|-> info location [Catalyst Name] \n";
         textBuilder = textBuilder+"|-> info hero [Hero Name] \n";
+        textBuilder = textBuilder+"|-> skill hero [Hero Name] \n";
+        textBuilder = textBuilder+"|-> stat hero [Hero Name] \n";
         textBuilder = textBuilder+"|-> info artifact [Artifact Name] \n";
         textBuilder = textBuilder+"|-> info morale [Heroes Name1],[Heroes Name2],[Heroes Name3],[Heroes Name4] \n\n";
         textBuilder = textBuilder+"Meaw hope meaw can help u :3 \n";
@@ -175,6 +178,14 @@ function handleEvent(event) {
       else if(cmd.includes("skill hero ") && cmd.length>11){       
         // detail skill about hero
         return detailHero("skill",event, cmd)
+      }
+      else if(cmd.includes("damage hero ") && cmd.length>12){       
+        // detail damage output from hero
+        return detailHero("damage",event, cmd)
+      }
+      else if(cmd.includes("#dmg_multiplier-")){       
+        // calculate damage output from hero
+        return dmgHero(event, cmd)
       }
       else if(cmd.includes("info artifact ") && cmd.length>14){       
         // detail info about hero
@@ -372,7 +383,7 @@ function searchItem(name){
 
 function detailArtifact(event, cmd){
   var request = require('request');
-    var id = cmd.toLowerCase().replace("info artifact ","").replace(/\s+/g, '-');                  
+    var id = cmd.toLowerCase().replace("info artifact ","").replace(/\& /g, '').replace(/\s+/g, '-');                  
     request('https://epicsevendb-apiserver.herokuapp.com/api/artifact/'+id, function (error, response, body) {        
       var res = JSON.parse(body);             
       if(res.results != null && res.results.length>0){
@@ -399,6 +410,30 @@ function detailArtifact(event, cmd){
       const echo = { type: 'text', text: textBuilder };
       return client.replyMessage(event.replyToken, echo);                        
     });
+}
+
+function dmgHero(event, cmd){
+  var formulas = cmd.split('\n');
+  console.log(formulas);
+  textBuilder = formulas[0];
+  for (let i = 2; i < formulas.length; i++) {        
+    if(formulas[i].includes("s1: ")){
+      var formula = formulas[i].replace("s1: ","");    
+      console.log('s1: ',Parser.evaluate(formula).toFixed(2));
+      textBuilder = textBuilder+'\n'+'s1: '+Parser.evaluate(formula).toFixed(2);
+    }else if(formulas[i].includes("s2: ")){
+      var formula = formulas[i].replace("s2: ","");    
+      console.log('s2: ',Parser.evaluate(formula).toFixed(2));
+      textBuilder = textBuilder+'\n'+'s2: '+Parser.evaluate(formula).toFixed(2);
+    }else if(formulas[i].includes("s3: ")){
+      var formula = formulas[i].replace("s3: ","");    
+      console.log('s3: ',Parser.evaluate(formula).toFixed(2));
+      textBuilder = textBuilder+'\n'+'s3: '+Parser.evaluate(formula).toFixed(2);
+    }
+  }
+  textBuilder = textBuilder+'\n'+'*The results may be different in game, because of damage reduction such as enemies defense stat, skill effects, etc';
+  const echo = { type: 'text', text: textBuilder };
+  return client.replyMessage(event.replyToken, echo);
 }
 
 function detailHero(detType, event, cmd){
@@ -439,7 +474,7 @@ function detailHero(detType, event, cmd){
   }
   else if(detType == "stat"){
     var request = require('request');
-    var id = cmd.toLowerCase().replace("stat hero ","").replace(/\s+/g, '-');                  
+    var id = cmd.toLowerCase().replace("stat hero ","").replace(/\& /g, '').replace(/\s+/g, '-');                  
     request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+id, function (error, response, body) {        
       var res = JSON.parse(body);              
       if(res.results != null && res.results.length>0){        
@@ -475,7 +510,7 @@ function detailHero(detType, event, cmd){
   }
   else if(detType == "skill"){
     var request = require('request');
-    var id = cmd.toLowerCase().replace("skill hero ","").replace(/\s+/g, '-');                  
+    var id = cmd.toLowerCase().replace("skill hero ","").replace(/\& /g, '').replace(/\s+/g, '-');                  
     request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+id, function (error, response, body) {        
       var res = JSON.parse(body);              
       if(res.results != null && res.results.length>0){        
@@ -505,12 +540,47 @@ function detailHero(detType, event, cmd){
       return client.replyMessage(event.replyToken, echo);                        
     });
   }
-  
+  else if(detType == "damage"){
+    var request = require('request');
+    var id = cmd.toLowerCase().replace("damage hero ","").replace(/\& /g, '').replace(/\s+/g, '-');                  
+    request('https://epicsevendb-apiserver.herokuapp.com/api/hero/'+id, function (error, response, body) {        
+      var res = JSON.parse(body);              
+      if(res.results != null && res.results.length>0){ 
+        textBuilder = '#DMG_Multiplier-'+id+"\n";
+        textBuilder = textBuilder+"Copy this message and change the variable below based on your hero stat";
+        if(res.results[0].skills[0].simpleDmgMod.simplified !== ""){
+          textBuilder = textBuilder+"\nS1: "+res.results[0].skills[0].simpleDmgMod.simplified;   
+        }
+        if(res.results[0].skills[1].simpleDmgMod.simplified !== ""){
+          textBuilder = textBuilder+"\nS2: "+res.results[0].skills[1].simpleDmgMod.simplified;   
+        }
+        if(res.results[0].skills[2].simpleDmgMod.simplified !== ""){
+          textBuilder = textBuilder+"\nS3: "+res.results[0].skills[2].simpleDmgMod.simplified;   
+        }
+      }else{
+        var searchRes = searchHero(id.replace('-', ' '));      
+        if(listhero==null){      
+          textBuilder = "You wrote it wrong, try again\n";
+        }else{
+          if(searchRes.length == 0){
+            textBuilder = "Sorry meaw don`t have any information about that :(\nMaybe you wrote it wrong, try again";  
+          }else{
+            textBuilder = "Maybe you mean one of these?\n";
+          }
+        }
+        for (let i = 0; i < searchRes.length; i++) {        
+          textBuilder = textBuilder+searchRes[i]+"\n";
+        }
+      }
+      const echo = { type: 'text', text: textBuilder };
+      return client.replyMessage(event.replyToken, echo);
+    });
+  }
 }
 
 function showLocationItem(event, cmd){
     var request = require('request');
-    var id = cmd.toLowerCase().replace("info location ","").replace(/\s+/g, '-');                      
+    var id = cmd.toLowerCase().replace("info location ","").replace(/\& /g, '').replace(/\s+/g, '-');                      
     request('https://epicsevendb-apiserver.herokuapp.com/api/item/'+id, function (error, response, body) {        
     var res = JSON.parse(body);     
     if(res.results != null && res.results.length>0){
